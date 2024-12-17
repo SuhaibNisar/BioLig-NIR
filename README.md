@@ -27,4 +27,4 @@ The repository contains 4 folders:
 
 This repository was developed within the Optimisation Methods for Green Applications group at Imperial College London (omega-icl: https://github.com/omega-icl).
 
-For any queries, please contact Suhaib Nisar at .
+For any queries, please contact Suhaib Nisar.
