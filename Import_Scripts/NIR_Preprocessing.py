@@ -49,7 +49,10 @@ def spectra_red_range(low_nm, high_nm, spectra, wavelength, spectra_raw):
     """
     nm_lower=np.where(wavelength == low_nm)[0][0]+1
     nm_upper=np.where(wavelength == high_nm)[0][0]
-    spectra_raw_red=spectra_raw[nm_upper:nm_lower,:]
+    if spectra_raw is not None:
+        spectra_raw_red=spectra_raw[nm_upper:nm_lower,:]
+    else:
+        spectra_raw_red=None
     spectra_avg_red=spectra[nm_upper:nm_lower,:]
     wavelength_red=wavelength[nm_upper:nm_lower]
     return wavelength_red, spectra_avg_red, spectra_raw_red
@@ -165,3 +168,38 @@ def preprocessing_combined(low_nm, up_nm, spectra_raw_avg, wavelength, spectra_r
 
     return wavelength_red, X_train, X_test
 
+def preprocessing_combined_singledataset(low_nm, up_nm, spectra_raw_avg, wavelength):
+    """
+    Preprocesses spectral data by applying various preprocessing techniques to both calibration and validation datasets.
+    Parameters:
+        low_nm (float): Lower bound of the wavelength range in nanometers.
+        up_nm (float): Upper bound of the wavelength range in nanometers.
+        spectra_raw_avg (ndarray): Averaged raw spectral data.
+        wavelength (ndarray): Array of wavelength values.
+    Returns:
+        tuple:
+            wavelength_red (ndarray): Reduced wavelength array after selecting the specified range.
+            X_train (ndarray): Preprocessed training data stack with multiple preprocessing steps applied.
+            X_test (ndarray): Preprocessed testing data stack with multiple preprocessing steps applied.
+    """
+    wavelength_red, spectra_red, _= spectra_red_range(low_nm, up_nm, spectra_raw_avg, wavelength, None)
+
+    w = 4*4+1 ; p = 2*2
+    spectra_smooth=spectra_smoothing(spectra_red,w,p,deriv=0)
+
+    X_data=spectra_smooth[:,:]
+
+    Xsnv, Xcenter = snv(X_data) ; Xsnv_detrend=detrend(Xsnv,axis=0)
+
+    Xmsc,ref=msc(X_data)
+
+    w = 15  ; p = 2
+    X_deriv=X_data[:] ;  X_savgol1=spectra_smoothing(X_deriv,w,p,deriv=1)
+    X_savgol1snv=spectra_smoothing(Xsnv,w,p,deriv=1) ; X_savgol1msc=spectra_smoothing(Xmsc,w,p,deriv=1)
+
+    w = 23 ; p = 3 ; X_savgol2=spectra_smoothing(X_deriv,w,p,deriv=2)
+    X_savgol2snv=spectra_smoothing(Xsnv,w,p,deriv=2) ; X_savgol2msc=spectra_smoothing(Xmsc,w,p,deriv=2)
+
+    X_all = np.stack((X_data.T,Xsnv.T,Xmsc.T,Xsnv_detrend.T,X_savgol1.T,X_savgol2.T, Xcenter.T, X_savgol1snv.T, X_savgol1msc.T, X_savgol2snv.T, X_savgol2msc.T),axis=2)
+
+    return wavelength_red, X_all
