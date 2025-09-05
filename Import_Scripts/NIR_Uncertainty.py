@@ -55,144 +55,6 @@ def uncertainty_estimation(pls, X_test, n_points = 100):
 
     return (y_hat, y_pos, y_dens)
 
-def violin_plot(y_pos_plot, y_dens_plot, y_hat_plot, y_test_plot, plot_labels, uncertainty_up, uncertainty_down, y_comp_err, sort_uncertainty = True, scale = 1, label_rotation = 50, time_plt = [],
-                            ha_plt = 'right', common_string = None, multiline_label = None, mass_closure = True, legend_loc = 'best', save_fig = False, save_name = '', subplot_labels = []):
-    """
-    Creates a violin plot with error bars, experimental data points, and mass closure indicators.
-    Parameters
-    ----------
-    y_pos_plot : ndarray
-        Array containing position values for violin plot construction.
-    y_dens_plot : ndarray
-        Array containing density values for violin plot construction.
-    y_hat_plot : ndarray
-        Array containing predicted values.
-    y_test_plot : ndarray
-        Array containing experimental/test data points.
-    plot_labels : array-like
-        Labels for x-axis.
-    uncertainty_up : ndarray
-        Upper uncertainty bounds.
-    uncertainty_down : ndarray
-        Lower uncertainty bounds.
-    y_comp_err : ndarray
-        Experimental error bars.
-    sort_uncertainty : bool, optional
-        If True, sorts plots by maximum uncertainty (default True).
-    scale : float, optional
-        Scaling factor for density plots (default 1).
-    label_rotation : int, optional
-        Rotation angle for x-axis labels (default 50).
-    time_plt : array-like, optional
-        Time points for x-axis (default empty list).
-    ha_plt : str, optional
-        Horizontal alignment for x-axis labels (default 'right').
-    common_string : str or list, optional
-        String(s) to remove from plot labels (default None).
-    multiline_label : str, optional
-        String to add line break after in labels (default None).
-    mass_closure : bool, optional
-        If True, shows mass closure indicators (default True).
-    legend_loc : str, optional
-        Location of the legend (default 'best').
-    save_fig : bool, optional
-        If True, saves the figure (default False).
-    save_name : str, optional
-        Prefix for saved figure filename (default '').
-    subplot_labels : list, optional
-        Labels for subplots (default empty list).
-    Returns
-    -------
-    None
-        Displays the plot and optionally saves it as a PNG file.
-    Notes
-    -----
-    The plot shows three components (Glucan, Hemicellulose, Lignin) with violin plots
-    representing distribution, diamond markers for predictions, circles for experimental
-    data, and error bars for uncertainties. Mass closure is indicated with red markers
-    if enabled.
-    """
-    mass_closure_plot = y_hat_plot.sum(axis=1)
-    plot_titles = ["Glucan (Cellulose)","Hemicellulose","Lignin"] ; ind_all = [0,1,2]
-    colour_all = ["darkgreen","#d9d900","navy","black","black","red"] ; rcParams['markers.fillstyle'] = 'full'
-    err_colour_all = ["lightgreen","darkolivegreen","deepskyblue","black","black","red"]
-    weight_all = ['bold','bold','bold','normal','normal','normal']
-    
-    n_test_plot = y_pos_plot.shape[0]
-    if sort_uncertainty:
-        l = np.argsort(np.max(y_dens_plot,axis=1)[:,0])[::-1] ; x_labels = plot_labels[l]
-    else:
-        l = list(range(0,n_test_plot)) ; x_labels = plot_labels[l]
-
-    if common_string!=None:
-        x_labels = [w.replace(' - 2', '') for w in x_labels]
-        if isinstance(common_string,list):
-            for i in range(len(common_string)):
-                x_labels = [w.replace(common_string[i], '') for w in x_labels]
-        else:
-            x_labels = [w.replace(common_string, '') for w in x_labels]
-    
-    if multiline_label!=None:
-        x_labels = [re.sub(multiline_label, multiline_label+'\n', w) for w in x_labels]
-
-    if len(time_plt) == 0:
-        time_plt = np.arange(n_test_plot) ; xlabel = "" ; l_label = list(range(n_test_plot+1))
-    else:
-        x_labels = [str(i) for i in time_plt] ; xlabel = 'Time (h)' ; l_label = np.insert(time_plt+1,0,0)
-    
-    fig,ax1 = plt.subplots(figsize = (6.5+0.5*n_test_plot,5))
-    for ind in ind_all:
-        for i in range(n_test_plot):
-            rgb_col = colors.to_rgba(colour_all[ind]) ; darkened_rgb_color = tuple(comp * 0.7 for comp in rgb_col) ; dark_col = colors.to_hex(darkened_rgb_color)
-            lightened_rgb_color = tuple(comp * 0.5 for comp in rgb_col) ; light_col = colors.to_hex(lightened_rgb_color)
-            ax1.fill_betweenx(y_pos_plot[l[i],:,ind], y_dens_plot[l[i],:,ind]*scale + time_plt[i]  + 1 , -y_dens_plot[l[i],:,ind]*scale+ time_plt[i] + 1, alpha = 0.5, color = colour_all[ind], edgecolor = dark_col)
-            if np.any(y_test_plot[l[i]]):
-                ax1.scatter(time_plt[i]+1, y_test_plot[l[i],ind], marker='o', edgecolors='black',color = colour_all[ind], s= 50)
-                ax1.errorbar(time_plt[i]+1, y_test_plot[l[i],ind], yerr=y_comp_err[l[i],ind], fmt='none', ecolor = err_colour_all[ind], elinewidth = 1.5, capsize = 5, linestyle = '--')
-        ax1.scatter(time_plt+1, y_hat_plot[l,ind], marker='D', edgecolor = dark_col, facecolor = 'none', s=50, linewidth = 2.5)
-        ax1.errorbar(time_plt+1, y_hat_plot[l,ind], yerr=[uncertainty_down[l,ind], uncertainty_up[l,ind]], fmt='none', ecolor = dark_col, elinewidth = 1.5, capsize = 5)
-
-    for j in plot_titles:
-        plt.plot([], [], ' ', label=j)
-
-    plt.scatter([], [], marker='D', edgecolor='black', facecolor = 'lightgrey', s=20, label="Nominal Predictions", linewidth = 2.5)
-    if np.any(y_test_plot):
-        plt.scatter([], [], marker='o', color='black', s=30, label="Experimental Data")
-
-    if mass_closure:
-        for i in range(n_test_plot):
-            plt.scatter(time_plt[i]+1,mass_closure_plot[i], marker = '_', color='red')
-            ax1.text(time_plt[i]+0.93, mass_closure_plot[i]+3, str(int(mass_closure_plot[i])), color = 'red')
-        plt.scatter([], [], marker='_', color='red', s=30, label="Mass Closure")
-
-    ax1.set_ylabel("Content (%)")
-    x_labels = np.insert(x_labels,0," ") ; 
-    plt.xticks(l_label, x_labels, rotation = label_rotation, ha = ha_plt)
-    plt.xlabel(xlabel)
-    plt.axhline(y=0, color = "black")
-    ax1.autoscale(axis="x")
-    if n_test_plot<=6:
-        leg = plt.legend(framealpha = 0, loc = legend_loc, ncol=3, bbox_to_anchor=(0.87,1.15), columnspacing=0.8)
-        if len(subplot_labels)>0:
-            ax1.text(0.12, 0.96, subplot_labels[0], horizontalalignment='center', verticalalignment='center', transform=ax1.transAxes, fontsize=12, fontweight='bold')
-    else:
-        leg = plt.legend(framealpha = 0, loc = legend_loc, ncol=6, bbox_to_anchor=(0.92,1.075), columnspacing=0.8)
-        if len(subplot_labels)>0:
-            ax1.text(0.12, 0.975, subplot_labels[0], horizontalalignment='center', verticalalignment='center', transform=ax1.transAxes, fontsize=12, fontweight='bold')
-    
-    for text,col, weight in zip(leg.get_texts(),colour_all, weight_all):
-        text.set_fontweight(weight)
-        if text.get_text() == 'Mass Closure':
-            plt.setp(text, color = 'red')
-        else:
-            plt.setp(text, color = col) 
-    ax1.xaxis.set_minor_locator(AutoMinorLocator(n=1))
-    ax1.yaxis.set_minor_locator(AutoMinorLocator(n=2))
-    plt.tight_layout()
-    if save_fig:
-        plt.savefig(save_name + "Uncertainty.png", pad_inches = 0, bbox_inches = "tight")
-    plt.show()
-
 def spectra_minmax(spectra_raw,num_repeats=4):
     """
     Calculate minimum and maximum values for repeated spectra measurements.
@@ -284,6 +146,33 @@ def uncertainty_estimation_spectra_calculation(y, y_min, y_max):
     
     return uncertainty_up, uncertainty_down
 
+def uncertainty_estimation_spectra(y, y_min, y_max):
+    """
+    This function estimates the uncertainty of the model prediction for each sample in the validation set.
+    The uncertainty is calculated as the sum of the absolute difference between the prediction of the model trained on the minimum and maximum spectra and the prediction of the model trained on the raw spectra.
+    The uncertainty is calculated for each sample
+    """
+    opposite_sign = np.sign(y_min - y) == -np.sign(y_max - y)
+    uncertainty_up = np.zeros_like(y) ; uncertainty_down = np.zeros_like(y)
+    for i in range(len(opposite_sign)):
+        for j in range(opposite_sign.shape[1]):
+            if opposite_sign[i,j]:
+                if y_min[i,j] > y_max[i,j]:
+                    uncertainty_up[i,j] = np.abs(y_min[i,j] - y[i,j])
+                    uncertainty_down[i,j] = np.abs(y_max[i,j] - y[i,j])
+                else:
+                    uncertainty_up[i,j] = np.abs(y_max[i,j] - y[i,j])
+                    uncertainty_down[i,j] = np.abs(y_min[i,j] - y[i,j])
+            else:
+                if y_min[i,j] > y[i,j]:
+                    uncertainty_up[i,j] = max(np.abs(y_min[i,j] - y[i,j]), np.abs(y_max[i,j] - y[i,j]))
+                    uncertainty_down[i,j] = 1E-5
+                else:
+                    uncertainty_down[i,j] = max(np.abs(y_min[i,j] - y[i,j]), np.abs(y_max[i,j] - y[i,j]))
+                    uncertainty_up[i,j] = 1E-5
+    
+    return uncertainty_up, uncertainty_down
+
 def plot_parity_with_uncertainty(y, y_c, uncertainty_down, uncertainty_up, labels, legend_title, save=False, savename=''):
     """
     Plots a parity plot with uncertainty bounds for multiple components.
@@ -349,8 +238,89 @@ def plot_parity_with_uncertainty(y, y_c, uncertainty_down, uncertainty_up, label
         plt.savefig(savename, pad_inches=0, bbox_inches='tight')
     plt.show()
 
+def violin_plot(y_pos_plot, y_dens_plot, y_hat_plot, y_test_plot, plot_labels, uncertainty_up, uncertainty_down, y_comp_err, sort_uncertainty = True, scale = 1, label_rotation = 50, time_plt = [],
+                            ha_plt = 'right', common_string = None, multiline_label = None, mass_closure = True, legend_loc = 'best', save_fig = False, save_name = '', plot_show = True):
+    mass_closure_plot = y_hat_plot.sum(axis=1)
+    plot_titles = ["Glucan (Cellulose)","Hemicellulose","Lignin"] ; ind_all = [0,1,2]
+    # colour_all = ["orange","green","purple","black","black","red"] ; rcParams['markers.fillstyle'] = 'full'
+    colour_all = ["darkgreen","#d9d900","navy","black","black","red"] ; rcParams['markers.fillstyle'] = 'full'
+    err_colour_all = ["lightgreen","darkolivegreen","deepskyblue","black","black","red"]
+    weight_all = ['bold','bold','bold','normal','normal','normal']
+    
+    n_test_plot = y_pos_plot.shape[0]
+    if sort_uncertainty:
+        l = np.argsort(np.max(y_dens_plot,axis=1)[:,0])[::-1] ; x_labels = plot_labels[l]
+    else:
+        l = list(range(0,n_test_plot)) ; x_labels = plot_labels[l]
+
+    if common_string!=None:
+        x_labels = [w.replace(' - 2', '') for w in x_labels]
+        if isinstance(common_string,list):
+            for i in range(len(common_string)):
+                x_labels = [w.replace(common_string[i], '') for w in x_labels]
+        else:
+            x_labels = [w.replace(common_string, '') for w in x_labels]
+    
+    if multiline_label!=None:
+        x_labels = [re.sub(multiline_label, multiline_label+'\n', w) for w in x_labels]
+
+    if len(time_plt) == 0:
+        time_plt = np.arange(n_test_plot) ; xlabel = "" ; l_label = list(range(n_test_plot+1))
+    else:
+        x_labels = [str(i) for i in time_plt] ; xlabel = 'Time (h)' ; l_label = np.insert(time_plt+1,0,0)
+    
+    fig,ax1 = plt.subplots(figsize = (7+0.5*n_test_plot,10))
+    for ind in ind_all:
+        for i in range(n_test_plot):
+            rgb_col = colors.to_rgba(colour_all[ind]) ; darkened_rgb_color = tuple(comp * 0.7 for comp in rgb_col) ; dark_col = colors.to_hex(darkened_rgb_color)
+            lightened_rgb_color = tuple(comp * 0.5 for comp in rgb_col) ; light_col = colors.to_hex(lightened_rgb_color)
+            ax1.fill_betweenx(y_pos_plot[l[i],:,ind], y_dens_plot[l[i],:,ind]*scale + time_plt[i]  + 1 , -y_dens_plot[l[i],:,ind]*scale+ time_plt[i] + 1, alpha = 0.5, color = colour_all[ind], edgecolor = dark_col)
+            if np.any(y_test_plot[l[i]]):
+                ax1.scatter(time_plt[i]+1, y_test_plot[l[i],ind], marker='o', edgecolors='black',color = colour_all[ind], s= 50)
+                ax1.errorbar(time_plt[i]+1, y_test_plot[l[i],ind], yerr=y_comp_err[l[i],ind], fmt='none', ecolor = err_colour_all[ind], elinewidth = 1.5, capsize = 5, linestyle = '--')
+        ax1.scatter(time_plt+1, y_hat_plot[l,ind], marker='D', edgecolor = dark_col, facecolor = 'none', s=50, linewidth = 2.5)
+        ax1.errorbar(time_plt+1, y_hat_plot[l,ind], yerr=[uncertainty_down[l,ind], uncertainty_up[l,ind]], fmt='none', ecolor = dark_col, elinewidth = 1.5, capsize = 5)
+
+    for j in plot_titles:
+        plt.plot([], [], ' ', label=j)
+
+    plt.scatter([], [], marker='D', edgecolor='black', facecolor = 'lightgrey', s=20, label="Nominal Predictions", linewidth = 2.5)
+    if np.any(y_test_plot):
+        plt.scatter([], [], marker='o', color='black', s=30, label="Experimental Data")
+
+    if mass_closure:
+        for i in range(n_test_plot):
+            plt.scatter(time_plt[i]+1,mass_closure_plot[i], marker = '_', color='red')
+            ax1.text(time_plt[i]+0.9, mass_closure_plot[i]+3, str(round(mass_closure_plot[i],1)), color = 'red')
+        plt.scatter([], [], marker='_', color='red', s=30, label="Mass Closure")
+
+    ax1.set_ylabel("Content (%)")
+    x_labels = np.insert(x_labels,0," ") ; 
+    plt.xticks(l_label, x_labels, rotation = label_rotation, ha = ha_plt)
+    plt.xlabel(xlabel)
+    plt.axhline(y=0, color = "black")
+    ax1.autoscale(axis="x")
+    if n_test_plot<=5:
+        leg = plt.legend(framealpha = 0, loc = legend_loc, ncol=3, bbox_to_anchor=(0.87,1.075), columnspacing=0.8)
+    else:
+        leg = plt.legend(framealpha = 0, loc = legend_loc, ncol=6, bbox_to_anchor=(1.05,1.05), columnspacing=0.8)
+    
+    for text,col, weight in zip(leg.get_texts(),colour_all, weight_all):
+        text.set_fontweight(weight)
+        if text.get_text() == 'Mass Closure':
+            plt.setp(text, color = 'red')
+        else:
+            plt.setp(text, color = col) 
+    ax1.xaxis.set_minor_locator(AutoMinorLocator(n=1))
+    ax1.yaxis.set_minor_locator(AutoMinorLocator(n=2))
+    plt.tight_layout()
+    if save_fig:
+        plt.savefig(save_name + "Uncertainty.png", pad_inches = 0, bbox_inches = "tight")
+    if plot_show:
+        plt.show()
+
 def violin_plot_compare(y_pos_plot_all, y_dens_plot_all, y_hat_plot_all, y_test_plot, plot_labels, uncertainty_up_all, uncertainty_down_all, y_comp_err, sort_uncertainty = True, scale = 1, label_rotation = 50, time_plt = [],
-                            ha_plt = 'right', common_string = None, multiline_label = None, mass_closure = True, legend_loc = 'best', save_fig = False, save_name = '', subplot_labels = []):
+                            ha_plt = 'right', common_string = None, multiline_label = None, mass_closure = True, legend_loc = 'best', save_fig = False, save_name = '', subplot_labels = [], plot_show = True):
     """
     Generates a violin plot to compare predicted and experimental data with uncertainties.
     Parameters:
@@ -488,5 +458,6 @@ def violin_plot_compare(y_pos_plot_all, y_dens_plot_all, y_hat_plot_all, y_test_
     ax1.yaxis.set_minor_locator(AutoMinorLocator(n=2))
     plt.tight_layout()
     if save_fig:
-        plt.savefig(save_name + "Uncertainty.png", pad_inches = 0, bbox_inches = "tight")
-    plt.show()
+        plt.savefig(save_name + "UncertaintyCompare.png", pad_inches = 0, bbox_inches = "tight")
+    if plot_show:
+        plt.show()
