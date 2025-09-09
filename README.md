@@ -1,5 +1,7 @@
 
-This repository (**BioLig-NIR**) contains the code required to generate results for the study (Near-infrared spectroscopy for rapid compositional analysis of cellulose pulps after fractionation with protic ionic liquids) for developing near infrared (NIR) spectroscopy-based compositional models for biomass samples, primarily those fractionated with protic ionic liquids. 
+This repository (**BioLig-NIR**) contains the code required to generate results for the study (Near-infrared spectroscopy for rapid compositional analysis of cellulose pulps after fractionation with protic ionic liquids) for developing near infrared (NIR) spectroscopy-based compositional models for biomass samples, primarily those fractionated with protic ionic liquids. Details of the study underpinning this work can be found at (**Please cite!**): https://doi.org/10.1016/j.biombioe.2025.108056
+
+For individual sample running with uncertainty quantification, please refer to the README file in the folder *Users*. The NIR models can be run either through *NIR_Script.py* or *NIR_Script.ipynb* in the main repository folder.
 
 There are 2 Jupyter notebooks to show how the results in the study were generated:
 - **ModelTraining_Notebook.ipynb**: In this notebook, the optimal models were developed by considering different spectral preprocessing techniques and spectral wavelength ranges.

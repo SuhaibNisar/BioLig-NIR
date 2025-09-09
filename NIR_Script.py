@@ -1,7 +1,7 @@
 import os
 import sys
 path =  os.getcwd()
-print(path)
+# print(path)
 sys.path.append(path + "\\Import_Scripts")
 
 import PLS
@@ -108,20 +108,22 @@ std = (y_pos[:,-1,:] - y_pos[:,0,:])/(2*1.96)
 
 # Reshape the arrays to have a third dimension
 array1_reshaped = y_hat.reshape(n_test, -1, 1)
-array2_reshaped = std.reshape(n_test, -1, 1)
+# array2_reshaped = std.reshape(n_test, -1, 1)
 array_3_reshaped = spectral_uncertainty_up.reshape(n_test, -1, 1)
 array_4_reshaped = spectral_uncertainty_down.reshape(n_test, -1, 1)
 
 # Concatenate the arrays along the third dimension
-result = np.concatenate((array1_reshaped,array_3_reshaped,array_4_reshaped, array2_reshaped), axis=2)
+result = np.concatenate((array1_reshaped,array_3_reshaped,array_4_reshaped), axis=2)
 
 # Reshape the result back to 2D
 result_2d = result.reshape(n_test, -1)
+result_2d = np.concatenate((result_2d, std), axis=1)
 
-df = pd.DataFrame(result_2d, index=sample_names, columns=['Glucan',"+","-",u"\u00B1 (Probability)", 'Hemicellulose',"+","-",u"\u00B1 (Probability)", 'Lignin',"+","-",u"\u00B1 (Probability)"])
+df = pd.DataFrame(result_2d, index=sample_names, columns=['Glucan',"+","-", 'Hemicellulose',"+","-", 'Lignin',"+","-",u"Glucan \u00B1 (Probability)",u"Hemicellulose \u00B1 (Probability)",u"Lignin \u00B1 (Probability)"])
 df.to_csv(save_loc+'Results.csv', index=True)
 
 if samples_charred == 'y':
+    print("Performing pseudo-lignin estimation...")
     # Preprocess the data
     low_nm = 800 ; up_nm = 2500
     wavelength_red, spectra_red, spectra_raw_red= spectra_red_range(low_nm, up_nm, spectra_raw_avg, wavelength, spectra_raw)
@@ -171,19 +173,19 @@ if samples_charred == 'y':
 
     # Reshape the arrays to have a third dimension
     array1_reshaped = y_hat_nonchar.reshape(n_test, -1, 1)
-    array2_reshaped = std.reshape(n_test, -1, 1)
+    # array2_reshaped = std.reshape(n_test, -1, 1)
     array_3_reshaped = spectral_uncertainty_up_nonchar.reshape(n_test, -1, 1)
     array_4_reshaped = spectral_uncertainty_down_nonchar.reshape(n_test, -1, 1)
 
     # Concatenate the arrays along the third dimension
-    result = np.concatenate((array1_reshaped,array_3_reshaped,array_4_reshaped, array2_reshaped), axis=2)
+    result = np.concatenate((array1_reshaped,array_3_reshaped,array_4_reshaped), axis=2)
 
     # Reshape the result back to 2D
     result_2d = result.reshape(n_test, -1)
 
     y_pseudolignin = y_hat[:,2] - y_hat_nonchar[:,2]
 
-    result_2d = np.concatenate((result_2d, y_pseudolignin.reshape(n_test,1)), axis=1)
+    result_2d = np.concatenate((result_2d, y_pseudolignin.reshape(n_test,1), std), axis=1)
 
-    df = pd.DataFrame(result_2d, index=sample_names, columns=['Glucan',"+","-",u"\u00B1 (Probability)", 'Hemicellulose',"+","-",u"\u00B1 (Probability)", 'Lignin',"+","-",u"\u00B1 (Probability)", 'Pseudo-Lignin'])
+    df = pd.DataFrame(result_2d, index=sample_names, columns=['Glucan',"+","-", 'Hemicellulose',"+","-", 'Lignin',"+","-", 'Pseudo-Lignin',u"Glucan \u00B1 (Probability)",u"Hemicellulose \u00B1 (Probability)",u"Lignin \u00B1 (Probability)"])
     df.to_csv(save_loc+'NonCharResults.csv', index=True)
